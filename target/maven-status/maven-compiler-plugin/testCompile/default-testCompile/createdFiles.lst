@@ -1,0 +1,3 @@
+com\example\cityinfo\CityinfoApiApplicationTests.class
+com\example\cityinfo\service\CityInfoServiceTest.class
+com\example\cityinfo\controller\CityInfoControllerTest.class

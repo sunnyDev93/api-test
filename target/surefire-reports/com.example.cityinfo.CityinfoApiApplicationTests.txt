@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.cityinfo.CityinfoApiApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.719 s - in com.example.cityinfo.CityinfoApiApplicationTests
