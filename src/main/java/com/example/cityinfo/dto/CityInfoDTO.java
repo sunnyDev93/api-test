@@ -14,4 +14,5 @@ public class CityInfoDTO {
     private String language;
     private List<String> borderingCountries;
     private List<String> topNewsHeadlines;
+    private String error;
 }

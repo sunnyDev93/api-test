@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -59,7 +60,11 @@ public class CityInfoService {
                 })
                 .onErrorResume(e -> {
                     log.error("Error fetching data for city {}: {}", city, e.toString());
-                    return cachedOpt.map(cached -> Mono.just(toDTO(cached))).orElseGet(() -> Mono.error(e));
+                    return cachedOpt.map(cached -> Mono.just(toDTO(cached)))
+                            .orElseGet(() -> Mono.just(CityInfoDTO.builder()
+                                    .city(city)
+                                    .error("Failed to fetch data for city: " + city)
+                                    .build()));
                 });
     }
 
@@ -72,23 +77,26 @@ public class CityInfoService {
         Mono<OpenWeatherResponse> weatherMono = fetchWeather(city)
                 .onErrorResume(e -> {
                     log.error("OpenWeatherMap API error for city {}: {}", city, e.toString());
-                    return Mono.error(new RuntimeException("Failed to fetch weather data for city: " + city, e));
-                });
+                    return Mono.just(new OpenWeatherResponse());
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)));
 
         Mono<RestCountriesResponse> countryMono = weatherMono.flatMap(weather ->
                 fetchCountryByAlphaCode(weather.getSys().getCountry())
                         .onErrorResume(e -> {
                             log.error("REST Countries API error for code {}: {}", weather.getSys().getCountry(), e.toString());
-                            return Mono.error(new RuntimeException("Failed to fetch country data for code: " + weather.getSys().getCountry(), e));
+                            return Mono.just(new RestCountriesResponse());
                         })
+                        .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
         );
 
         Mono<NewsApiResponse> newsMono = countryMono.flatMap(country ->
                 fetchNews(country.getCca2().toLowerCase())
                         .onErrorResume(e -> {
                             log.error("News API error for country {}: {}", country.getCca2(), e.toString());
-                            return Mono.error(new RuntimeException("Failed to fetch news for country: " + country.getCca2(), e));
+                            return Mono.just(new NewsApiResponse());
                         })
+                        .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
         );
 
         return Mono.zip(weatherMono, countryMono, newsMono)
@@ -97,19 +105,14 @@ public class CityInfoService {
                     RestCountriesResponse country = tuple.getT2();
                     NewsApiResponse news = tuple.getT3();
 
-                    if (weather == null || country == null) {
-                        throw new RuntimeException("Essential data is missing for city: " + city);
-                    }
+                    String language = (country != null && country.getLanguages() != null) ? 
+                        country.getLanguages().values().iterator().next() : "N/A";
 
-                    String language = "N/A";
-                    if (country.getLanguages() != null && !country.getLanguages().isEmpty()) {
-                        language = country.getLanguages().values().iterator().next();
-                    }
+                    List<String> borders = (country != null && country.getBorders() != null) ? 
+                        country.getBorders() : Collections.emptyList();
 
-                    List<String> borders = country.getBorders() != null ? country.getBorders() : Collections.emptyList();
-                    List<String> headlines = (news != null && news.getArticles() != null)
-                            ? news.getArticles().stream().map(NewsApiResponse.Article::getTitle).collect(Collectors.toList())
-                            : Collections.emptyList();
+                    List<String> headlines = (news != null && news.getArticles() != null) ? 
+                        news.getArticles().stream().map(NewsApiResponse.Article::getTitle).collect(Collectors.toList()) : Collections.emptyList();
 
                     return CityInfoDTO.builder()
                             .city(city)
@@ -121,8 +124,8 @@ public class CityInfoService {
                             .build();
                 })
                 .onErrorResume(e -> {
-                    log.error("Failed to fetch full city info for {}: {}", city, e.toString());
-                    return Mono.error(new RuntimeException("Error processing city data for " + city, e));
+                    log.error("Failed to fetch city data for {}: {}", city, e.toString());
+                    return Mono.just(CityInfoDTO.builder().city(city).error("Error processing city data").build());
                 });
     }
 
