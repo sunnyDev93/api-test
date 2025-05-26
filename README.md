@@ -7,7 +7,7 @@ A Spring Boot application that aggregates city-specific information from multipl
 ## ✨ Features
 
 * ✅ Fetch **temperature**, **country details**, **language**, **bordering countries**, and **top news headlines** for a list of cities.
-* 📤 Optional data export (CSV / JSON).
+* 📄 Optional data export (CSV / JSON).
 * 🧠 Configurable historical data storage and automatic updates.
 * 📀 Stores results in a PostgreSQL database.
 * 🌐 Consumes:
@@ -15,8 +15,9 @@ A Spring Boot application that aggregates city-specific information from multipl
   * [OpenWeatherMap](https://openweathermap.org/)
   * [REST Countries](https://restcountries.com/)
   * [News API](https://newsapi.org/)
-* 🧲 Comprehensive unit tests using JUnit and Mockito.
+* 🨲 Comprehensive unit tests using JUnit and Mockito.
 * 🐳 Dockerized for easy deployment.
+* 📘 Swagger UI for interactive API documentation.
 
 ---
 
@@ -30,6 +31,7 @@ A Spring Boot application that aggregates city-specific information from multipl
 * **Lombok**
 * **OpenCSV**
 * **JUnit 5 + Mockito**
+* **springdoc-openapi (Swagger 3)**
 
 ---
 
@@ -37,20 +39,20 @@ A Spring Boot application that aggregates city-specific information from multipl
 
 ```plaintext
 src
-├── main
-│   ├── java/com/example/cityinfo
-│   │   ├── config/                  # API keys, WebClient config
-│   │   ├── controller/              # CityInfoController
-│   │   ├── dto/                     # Data Transfer Objects
-│   │   ├── entity/                  # CityInfo JPA Entity
-│   │   ├── exception/               # GlobalExceptionHandler
-│   │   ├── repository/              # JPA repository
-│   │   ├── service/                 # Business logic
-│   │   └── CityInfoApiApplication   # Spring Boot main class
-│   └── resources/
-│       └── application.properties   # App config
-└── test/java/com/example/cityinfo/
-    └── ...                          # Unit tests
+🕼️ main
+🕼️🕼️ java/com/example/cityinfo
+🕼️🕼️🕼️ config/                  # API keys, WebClient config
+🕼️🕼️🕼️ controller/              # CityInfoController
+🕼️🕼️🕼️ dto/                     # Data Transfer Objects
+🕼️🕼️🕼️ entity/                  # CityInfo JPA Entity
+🕼️🕼️🕼️ exception/               # GlobalExceptionHandler
+🕼️🕼️🕼️ repository/              # JPA repository
+🕼️🕼️🕼️ service/                 # Business logic
+🕼️🕼️🕼️ CityInfoApiApplication   # Spring Boot main class
+🕼️🕼️ resources/
+🕼️🕼️🕼️ application.properties   # App config
+🕼️ test/java/com/example/cityinfo/
+    🕼️ ...                          # Unit tests
 ```
 
 ---
@@ -60,8 +62,8 @@ src
 In `application.properties`:
 
 ```properties
-weather.api.key=YOUR_OPENWEATHER_API_KEY
-news.api.key=YOUR_NEWSAPI_KEY
+api.openweathermap.key=YOUR_OPENWEATHERMAP_API_KEY
+api.newsapi.key=YOUR_NEWSAPI_KEY
 spring.datasource.url=jdbc:postgresql://localhost:5432/cityinfo
 spring.datasource.username=youruser
 spring.datasource.password=yourpassword
@@ -88,39 +90,117 @@ Make sure PostgreSQL is running and accessible with the provided credentials.
 
 ---
 
-## 🥪 Running Tests
+## 🧪 Running Tests
 
-> ⚠️ Normally, tests are run as part of `start.ps1`. To run them manually:
-> bash
-> mvn test
+```bash
+mvn test
+```
 
-````
+---
+
+## 📘 API Documentation (Swagger)
+
+Once the app is running, access Swagger UI at:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+This interactive UI allows you to:
+
+* Explore and test endpoints
+* View input parameters and output schema
+* Generate documentation automatically from code annotations
+
+API documentation is powered by `springdoc-openapi-starter-webflux-ui`.
 
 ---
 
 ## 🐳 Docker
 
-To build and run the application using Docker:
+### 🔧 Build and Run with Docker CLI
 
 ```bash
+# Build image
 docker build -t cityinfo-api .
-docker run -p 8080:8080 --env-file .env cityinfo-api
-````
+
+# Run container with environment variables
+docker run -p 8080:8080 \
+  -e API_OPENWEATHERMAP_KEY=your_key \
+  -e API_NEWSAPI_KEY=your_key \
+  cityinfo-api
+```
+
+> ⚠️ Make sure your `application.properties` reads from these env variables using `@Value`.
 
 ---
 
-## 🛠️ API Endpoint
+## 🐳 Docker Compose
 
-### `POST /api/cityinfo`
+### 📦 `docker-compose.yml`
 
-**Request Body Example:**
+```yaml
+version: '3.8'
 
-```json
-{
-  "cities": ["Berlin", "Paris", "New York"],
-  "export": true,
-  "includeResponse": true
-}
+services:
+  db:
+    image: postgres:14
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: cityinfo
+      POSTGRES_USER: cityuser
+      POSTGRES_PASSWORD: citypass
+
+  app:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cityinfo
+      SPRING_DATASOURCE_USERNAME: cityuser
+      SPRING_DATASOURCE_PASSWORD: citypass
+      API_OPENWEATHERMAP_KEY: your_openweathermap_key
+      API_NEWSAPI_KEY: your_newsapi_key
+```
+
+### ▶️ Run Everything
+
+```bash
+docker-compose up --build
+```
+
+Then access:
+
+* App: [http://localhost:8080](http://localhost:8080)
+* Swagger: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+To stop everything:
+
+```bash
+docker-compose down
+```
+
+---
+
+## 💠 API Endpoint
+
+### `GET /api/v1/cities`
+
+**Query Parameters:**
+
+* `cities`: list of cities (required)
+* `exportFormat`: `JSON` (default) or `CSV`
+* `includeResponseBody`: `true`/`false`
+* `saveToDb`: `true`/`false`
+
+**Example:**
+
+```http
+GET /api/v1/cities?cities=Berlin,Paris&exportFormat=JSON&includeResponseBody=true
 ```
 
 **Response:**
@@ -129,25 +209,18 @@ docker run -p 8080:8080 --env-file .env cityinfo-api
 [
   {
     "city": "Berlin",
-    "temperature": "12°C",
+    "temperature": 12.0,
     "countryCode": "DE",
     "language": "German",
-    "borders": ["FR", "PL", "CZ"],
-    "topHeadlines": ["News headline 1", "News headline 2"]
-  },
-  ...
+    "borderingCountries": ["FR", "PL", "CZ"],
+    "topNewsHeadlines": ["News headline 1", "News headline 2"]
+  }
 ]
 ```
 
 ---
 
-## 📤 Export Options
-
-* Exported CSV and JSON files will be generated in the configured output directory or returned in the API response if `includeResponse=true`.
-
----
-
-## 🧹 API References
+## 🧹 API Sources
 
 | Source         | Base URL                               | Auth Required | Description               |
 | -------------- | -------------------------------------- | ------------- | ------------------------- |
@@ -159,6 +232,5 @@ docker run -p 8080:8080 --env-file .env cityinfo-api
 
 ## 📓 Author
 
-Developed as part of the **API Developer Assessment** for **John Galt** by Vitalii Yuzvyk.
-
----
+Developed as part of the **API Developer Assessment** for **John Galt**
+👨‍💻 by **Vitalii Yuzvyk**
