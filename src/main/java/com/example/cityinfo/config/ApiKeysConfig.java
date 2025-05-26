@@ -8,10 +8,10 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 public class ApiKeysConfig {
 
-    @Value("${api.openweathermap.key}")
+    @Value("${API_OPENWEATHERMAP_KEY}")
     private String openWeatherMapKey;
 
-    @Value("${api.newsapi.key}")
+    @Value("${API_NEWSAPI_KEY}")
     private String newsApiKey;
 
 }
