@@ -37,6 +37,9 @@ public class CityInfoService {
     private final Duration cacheDuration = Duration.ofHours(1);
 
     public Flux<CityInfoDTO> getCityInfo(List<String> cities, boolean saveToDb) {
+        if (cities == null || cities.isEmpty()) {
+            return Flux.empty();
+        }
         return Flux.fromIterable(cities)
                 .flatMap(city -> getOrUpdateCityInfo(city, saveToDb));
     }
